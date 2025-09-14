@@ -1,0 +1,30 @@
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: devops-pipelines
+      ref: refs/heads/main
+
+variables:
+  - group: Security-Keys   # centralised API keys
+
+parameters:
+  - name: enableWizIac
+    displayName: "Run Wiz IaC Scan?"
+    type: boolean
+    default: true
+
+stages:
+  - stage: SecurityScan
+    jobs:
+      - template: azure-pipelines-templates/security-scan-template.yml@templates
+        parameters:
+          runWizIac: ${{ parameters.enableWizIac }}
+
+          # secret from central variable group
+          wizApiToken: $(WIZ_API_TOKEN)
+
+          # dynamic metadata
+          projectName: $(Build.Repository.Name)
+          branchName: $(Build.SourceBranchName)
+          scanDirectory: 'terraform/'

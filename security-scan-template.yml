@@ -1,0 +1,85 @@
+parameters:
+  # scan toggles
+  - name: runFossa
+    type: boolean
+    default: false
+  - name: runWizDirectory
+    type: boolean
+    default: false
+  - name: runSonar
+    type: boolean
+    default: false
+  - name: runWizIac
+    type: boolean
+    default: false
+
+  # tokens & config
+  - name: fossaApiKey
+    type: string
+    default: ''
+  - name: sonarToken
+    type: string
+    default: ''
+  - name: wizApiToken
+    type: string
+    default: ''
+  - name: scanDirectory
+    type: string
+    default: '.'
+
+  # repo metadata (collected from target repo)
+  - name: projectName
+    type: string
+    default: ''
+  - name: branchName
+    type: string
+    default: ''
+
+jobs:
+  - job: SecurityScans
+    displayName: Security Scans
+    steps:
+      # =================== FOSSA ===================
+      - ${{ if eq(parameters.runFossa, true) }}:
+        - script: |
+            echo "🔎 Running FOSSA scan..."
+            export FOSSA_API_KEY=${{ parameters.fossaApiKey }}
+            ./fossa analyze --project ${{ parameters.projectName }} \
+                            --revision ${{ parameters.branchName }} \
+                            --path ${{ parameters.scanDirectory }}
+            ./fossa test
+          displayName: "FOSSA Scan"
+
+      # =================== Wiz Directory ===================
+      - ${{ if eq(parameters.runWizDirectory, true) }}:
+        - script: |
+            echo "🔎 Running Wiz CLI Directory Scan..."
+            export WIZ_API_TOKEN=${{ parameters.wizApiToken }}
+            ./wizcli dir scan \
+              --name ${{ parameters.projectName }} \
+              --branch ${{ parameters.branchName }} \
+              ${{ parameters.scanDirectory }}
+          displayName: "Wiz CLI Directory Scan"
+
+      # =================== SonarQube ===================
+      - ${{ if eq(parameters.runSonar, true) }}:
+        - script: |
+            echo "🔎 Running SonarQube Scan..."
+            export SONAR_TOKEN=${{ parameters.sonarToken }}
+            sonar-scanner \
+              -Dsonar.projectKey=${{ parameters.projectName }} \
+              -Dsonar.branch.name=${{ parameters.branchName }} \
+              -Dsonar.sources=${{ parameters.scanDirectory }} \
+              -Dsonar.login=${{ parameters.sonarToken }}
+          displayName: "SonarQube Scan"
+
+      # =================== Wiz IaC ===================
+      - ${{ if eq(parameters.runWizIac, true) }}:
+        - script: |
+            echo "🔎 Running Wiz CLI IaC Scan..."
+            export WIZ_API_TOKEN=${{ parameters.wizApiToken }}
+            ./wizcli iac scan \
+              --name ${{ parameters.projectName }} \
+              --branch ${{ parameters.branchName }} \
+              ${{ parameters.scanDirectory }}
+          displayName: "Wiz CLI IaC Scan"

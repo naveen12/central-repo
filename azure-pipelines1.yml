@@ -1,0 +1,48 @@
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: devops-pipelines
+      ref: refs/heads/main
+
+variables:
+  - group: Security-Keys   # centralised API keys
+
+parameters:
+  - name: enableFossa
+    displayName: "Run FOSSA Scan?"
+    type: boolean
+    default: false
+  - name: enableWizDirectory
+    displayName: "Run Wiz CLI Directory Scan?"
+    type: boolean
+    default: false
+  - name: enableSonar
+    displayName: "Run Sonar Scan?"
+    type: boolean
+    default: false
+  - name: enableWizIac
+    displayName: "Run Wiz IaC Scan?"
+    type: boolean
+    default: false
+
+stages:
+  - stage: SecurityScan
+    displayName: "🔐 Security Scan Stage"
+    jobs:
+      - template: azure-pipelines-templates/security-scan-template.yml@templates
+        parameters:
+          runFossa: ${{ parameters.enableFossa }}
+          runWizDirectory: ${{ parameters.enableWizDirectory }}
+          runSonar: ${{ parameters.enableSonar }}
+          runWizIac: ${{ parameters.enableWizIac }}
+
+          # secrets (from centralised variable group)
+          fossaApiKey: $(FOSSA_API_KEY)
+          sonarToken: $(SONAR_TOKEN)
+          wizApiToken: $(WIZ_API_TOKEN)
+
+          # dynamic metadata
+          projectName: $(Build.Repository.Name)
+          branchName: $(Build.SourceBranchName)
+          scanDirectory: '.'
